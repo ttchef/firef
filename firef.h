@@ -13,9 +13,16 @@ extern "C" {
 
 #define FR_STANDARD_FILE_SIZE 1024
 #define FR_STANDARD_READ_SIZE_STEP 1024
+#define FR_STANDARD_VERTICES_STEP 128
 #define FR_MAX_OBJ_LINE_SIZE 128
+#define FR_STANDARD_ARRAY_COUNT 200
 
 typedef struct {
+    unsigned int numVertices;
+    unsigned int numUV;
+    unsigned int numNormals;
+    unsigned int numIndicies;
+
     float* vertices;
     float* uv;
     float* normals;
@@ -38,10 +45,23 @@ void fr_parseFile(char* buffer, fr_Obj* obj);
 #ifdef FIREF_IMPL
 
 void fr_loadObj(const char *filepath, fr_Obj *obj) {
-    obj->vertices = NULL;
-    obj->uv = NULL;
-    obj->normals = NULL;
-    obj->indicies = NULL;
+    obj->vertices = (float*)malloc(FR_STANDARD_ARRAY_COUNT * sizeof(float));
+    obj->uv = (float*)malloc(FR_STANDARD_ARRAY_COUNT * sizeof(float));
+    obj->normals = (float*)malloc(FR_STANDARD_ARRAY_COUNT * sizeof(float));
+    obj->indicies = (unsigned int*)malloc(FR_STANDARD_ARRAY_COUNT * sizeof(unsigned int));
+
+    if (obj->vertices == NULL ||
+        obj->uv == NULL ||
+        obj->normals == NULL || 
+        obj->indicies == NULL) {
+        printf("[ERROR] Couldnt Allocate Default Memory for fr_Obj Arrays!\n");
+        return;
+    }
+
+    obj->numVertices = 0;
+    obj->numUV = 0;
+    obj->numNormals = 0;
+    obj->numIndicies = 0;
 
     size_t bufferSize = 0;
     char* buffer = fr_readFile(filepath, &bufferSize);
@@ -55,6 +75,10 @@ void fr_loadObj(const char *filepath, fr_Obj *obj) {
     }    
 
     fr_parseFile(buffer, obj);
+
+    for (int i = 0; i < obj->numVertices; i++) {
+        printf("%d: %f\n", i, obj->vertices[i]);
+    }
 
 }
 
@@ -136,14 +160,64 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
     
     int j = 0;
     while (*buffer != '\0') {
+        // Generate Line
         char line[FR_MAX_OBJ_LINE_SIZE];
         int i = 0;
         while (*buffer != '\n' && *buffer != '\0') {
             line[i++] = *buffer++;
         }
         line[i] = '\0';
-        printf("%d Line:  %s\n", j++, line);
         
+        if (i < 2) { continue; }
+
+        int lineIndex = 0;
+        switch (line[lineIndex++]) {
+            case 'v':
+                switch (line[lineIndex++]) {
+                    // Vertex Pos
+                    case ' ': {
+                        double vertex[3];
+                        int vertxIndex = 0;
+                        char temp[FR_MAX_OBJ_LINE_SIZE];
+                        vertex_pos_loop:
+                        for (int j = 0; line[lineIndex] != ' ' && line[lineIndex] != '\0' && line[lineIndex] != '\n'; j++) {
+                            temp[j] = line[lineIndex++];
+                        }
+                        temp[j] = '\0';
+                        char* succ;
+                        vertex[vertxIndex++] = strtod(temp, &succ);
+                        lineIndex++;
+                        if (vertxIndex < 2) { goto vertex_pos_loop; }
+                        
+                        if (sizeof(obj->vertices) / sizeof(typeof(obj->vertices[0])) < obj->numVertices)  {
+                            obj->vertices = (float*)realloc(obj->vertices, obj->numVertices + (float)FR_STANDARD_VERTICES_STEP);                       
+                        }
+                        obj->vertices[obj->numVertices++] = vertex[0];
+                        obj->vertices[obj->numVertices++] = vertex[1];
+                        obj->vertices[obj->numVertices++] = vertex[2];
+                        break;
+                    }
+                        
+
+                    // UV Cordinate
+                    case 't': {
+
+                        break;
+                    }
+
+                    // Normal
+                    case 'n': {
+
+                        break;
+                    }
+                }
+                break;
+            case 'f': {
+
+                break;
+            }
+        }
+
         buffer++;
     }
 
