@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h> 
 
-//#define FIREF_IMPL
+#define FIREF_IMPL
 
 #ifdef __cplusplus 
 extern "C" {
@@ -48,8 +48,12 @@ void fr_loadObjObject(const char *filepath, fr_ObjObject *obj) {
         printf("[ERROR] Couldnt construct ObjObject!\n");
         return;
     }
+    if (bufferSize == 0) {
+        printf("[ERROR] bufferSize when reading file: %s did not update!\n", filepath);
+    }    
 
-    printf("%s\n", buffer);
+    
+
 }
 
 void fr_freeObjObject(fr_ObjObject* obj) {
@@ -60,14 +64,14 @@ void fr_freeObjObject(fr_ObjObject* obj) {
 }
 
 char* fr_readFile(const char* filepath, size_t* outBufferSize) {
-    FILE* file = fopen(filepath, "r");
+    FILE* file = fopen(filepath, "rb");
     if (file == NULL) {
         printf("[ERROR] Opening File: %s\n", filepath);
         return NULL;
     }
 
     size_t capacity = FR_STANDARD_FILE_SIZE;
-    size_t size;
+    size_t size = 0;
 
     char* buffer = (char*)malloc(sizeof(char) * capacity);
     if (buffer == NULL) {
@@ -78,7 +82,7 @@ char* fr_readFile(const char* filepath, size_t* outBufferSize) {
 
     while (!feof(file)) {
         if (size + FR_STANDARD_READ_SIZE_STEP > capacity) {
-            capacity *= 2;
+            capacity += size + FR_STANDARD_READ_SIZE_STEP;
             char* newBuffer = (char*)realloc(buffer, capacity);
             if (newBuffer == NULL) {
                 printf("[ERROR] Couldnt Allocate memory for reading file: %s\n", filepath);
