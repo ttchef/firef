@@ -76,8 +76,10 @@ void fr_loadObj(const char *filepath, fr_Obj *obj) {
 
     fr_parseFile(buffer, obj);
 
-    for (int i = 0; i < obj->numVertices; i++) {
-        printf("%d: %f\n", i, obj->vertices[i]);
+    for (int i = 0; i < obj->numVertices; i+=3) {
+        printf("%d: %f", i/3, obj->vertices[i]);
+        printf(" | %f", obj->vertices[i+1]);
+        printf(" | %f\n", obj->vertices[i+2]);
     }
 
 }
@@ -177,17 +179,19 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                     // Vertex Pos
                     case ' ': {
                         double vertex[3];
-                        int vertxIndex = 0;
+                        int vertexIndex = 0;
                         char temp[FR_MAX_OBJ_LINE_SIZE];
+                        int j;
                         vertex_pos_loop:
-                        for (int j = 0; line[lineIndex] != ' ' && line[lineIndex] != '\0' && line[lineIndex] != '\n'; j++) {
+                        j = 0;
+                        for (; line[lineIndex] != ' ' && line[lineIndex] != '\0' && line[lineIndex] != '\n'; j++) {
                             temp[j] = line[lineIndex++];
                         }
                         temp[j] = '\0';
                         char* succ;
-                        vertex[vertxIndex++] = strtod(temp, &succ);
+                        vertex[vertexIndex++] = strtod(temp, &succ);
                         lineIndex++;
-                        if (vertxIndex < 2) { goto vertex_pos_loop; }
+                        if (vertexIndex < 3) { goto vertex_pos_loop; }
                         
                         if (sizeof(obj->vertices) / sizeof(typeof(obj->vertices[0])) < obj->numVertices)  {
                             obj->vertices = (float*)realloc(obj->vertices, obj->numVertices + (float)FR_STANDARD_VERTICES_STEP);                       
