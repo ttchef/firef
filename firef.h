@@ -13,19 +13,21 @@ extern "C" {
 
 #define FR_STANDARD_FILE_SIZE 1024
 #define FR_STANDARD_READ_SIZE_STEP 1024
+#define FR_MAX_OBJ_LINE_SIZE 128
 
 typedef struct {
     float* vertices;
     float* uv;
     float* normals;
     unsigned int* indicies;
-} fr_ObjObject;
+} fr_Obj;
 
-void fr_loadObjObject(const char* filepath, fr_ObjObject* obj);
-void fr_freeObjObject(fr_ObjObject* obj);
+void fr_loadObj(const char* filepath, fr_Obj* obj);
+void fr_freeObj(fr_Obj* obj);
 
 // internal functions
 char* fr_readFile(const char* filepath, size_t* outBufferSize);
+void fr_parseFile(char* buffer, fr_Obj* obj);
 
 #ifdef __cplusplus
 }
@@ -35,7 +37,7 @@ char* fr_readFile(const char* filepath, size_t* outBufferSize);
 
 #ifdef FIREF_IMPL
 
-void fr_loadObjObject(const char *filepath, fr_ObjObject *obj) {
+void fr_loadObj(const char *filepath, fr_Obj *obj) {
     obj->vertices = NULL;
     obj->uv = NULL;
     obj->normals = NULL;
@@ -52,11 +54,11 @@ void fr_loadObjObject(const char *filepath, fr_ObjObject *obj) {
         printf("[ERROR] bufferSize when reading file: %s did not update!\n", filepath);
     }    
 
-    
+    fr_parseFile(buffer, obj);
 
 }
 
-void fr_freeObjObject(fr_ObjObject* obj) {
+void fr_freeObj(fr_Obj* obj) {
     if (obj->vertices != NULL)  free(obj->vertices);
     if (obj->uv != NULL)        free(obj->uv);
     if (obj->normals != NULL)   free(obj->normals);
@@ -128,6 +130,23 @@ char* fr_readFile(const char* filepath, size_t* outBufferSize) {
     }
 
     return buffer;
+}
+
+void fr_parseFile(char *buffer, fr_Obj *obj) {
+    
+    int j = 0;
+    while (*buffer != '\0') {
+        char line[FR_MAX_OBJ_LINE_SIZE];
+        int i = 0;
+        while (*buffer != '\n' && *buffer != '\0') {
+            line[i++] = *buffer++;
+        }
+        line[i] = '\0';
+        printf("%d Line:  %s\n", j++, line);
+        
+        buffer++;
+    }
+
 }
 
 #endif

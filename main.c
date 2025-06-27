@@ -6,11 +6,11 @@
 
 int main() {
 
-    fr_ObjObject cube;
-    fr_loadObjObject("cube.obj", &cube);
+    fr_Obj cube;
+    fr_loadObj("cube.obj", &cube);
 
 
-    fr_freeObjObject(&cube);
+    fr_freeObj(&cube);
 
     return 0;
 }
