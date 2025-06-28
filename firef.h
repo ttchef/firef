@@ -327,7 +327,7 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                     indicies[indiciesIndex++] = strtoul(temp, &succ, 10) - 1;
               
                     // Skip the other things
-                    while (line[lineIndex] != ' ' && (line[lineIndex] != '\0' || line[lineIndex] != '\n')) {
+                    while (line[lineIndex] != ' ' && line[lineIndex] != '\0' && line[lineIndex] != '\n') {
                         lineIndex++;
                     }
 

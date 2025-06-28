@@ -7,7 +7,7 @@
 int main() {
 
     fr_Obj cube;
-    fr_loadObj("pyramid.obj", &cube);
+    fr_loadObj("cube.obj", &cube);
 
     // for debugging
     fr_printObj(&cube);
