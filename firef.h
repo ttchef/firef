@@ -11,17 +11,25 @@
 extern "C" {
 #endif
 
+// In Bytes
 #define FR_STANDARD_FILE_SIZE 1024
 #define FR_STANDARD_READ_SIZE_STEP 1024
+
+// In Elements
+#define FR_STANDARD_ARRAY_COUNT 200
 #define FR_STANDARD_VERTICES_STEP 128
 #define FR_MAX_OBJ_LINE_SIZE 128
-#define FR_STANDARD_ARRAY_COUNT 200
 
 typedef struct {
     unsigned int numVertices;
     unsigned int numUV;
     unsigned int numNormals;
     unsigned int numIndicies;
+
+    unsigned int capacityVertices;
+    unsigned int capacityUV;
+    unsigned int capacityNormals;
+    unsigned int capacityIndicies;
 
     float* vertices;
     float* uv;
@@ -63,6 +71,11 @@ void fr_loadObj(const char *filepath, fr_Obj *obj) {
     obj->numNormals = 0;
     obj->numIndicies = 0;
 
+    obj->capacityVertices = sizeof(float) * FR_STANDARD_ARRAY_COUNT;
+    obj->capacityUV = sizeof(float) * FR_STANDARD_ARRAY_COUNT;
+    obj->capacityNormals = sizeof(float) * FR_STANDARD_ARRAY_COUNT;
+    obj->capacityIndicies = sizeof(unsigned int) * FR_STANDARD_ARRAY_COUNT;
+
     size_t bufferSize = 0;
     char* buffer = fr_readFile(filepath, &bufferSize);
     if (buffer == NULL) {
@@ -80,6 +93,13 @@ void fr_loadObj(const char *filepath, fr_Obj *obj) {
         printf("%d: %f", i/3, obj->vertices[i]);
         printf(" | %f", obj->vertices[i+1]);
         printf(" | %f\n", obj->vertices[i+2]);
+    }
+
+    printf("\n\n");
+
+    for (int i = 0; i < obj->numUV; i+=2) {
+        printf("%d: %f", i/2, obj->uv[i]);
+        printf(" | %f\n", obj->uv[i+1]);
     }
 
 }
@@ -193,8 +213,12 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                         lineIndex++;
                         if (vertexIndex < 3) { goto vertex_pos_loop; }
                         
-                        if (sizeof(obj->vertices) / sizeof(typeof(obj->vertices[0])) < obj->numVertices)  {
-                            obj->vertices = (float*)realloc(obj->vertices, obj->numVertices + (float)FR_STANDARD_VERTICES_STEP);                       
+                        if (obj->capacityVertices < obj->numVertices * sizeof(typeof(obj->vertices[0])))  {
+                            obj->vertices = (float*)realloc(obj->vertices, obj->capacityVertices += FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertices[0]))); 
+                            if (obj->vertices == NULL) {
+                                printf("[ERROR] Couldnt reallocate veritces buffer while parsing file!\n");
+                                return;
+                            }
                         }
                         obj->vertices[obj->numVertices++] = vertex[0];
                         obj->vertices[obj->numVertices++] = vertex[1];
@@ -205,7 +229,31 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
 
                     // UV Cordinate
                     case 't': {
+                        lineIndex++; // get rid of the whitespace
+                        double uv[2];
+                        int uvIndex = 0;
+                        char temp[FR_MAX_OBJ_LINE_SIZE];
+                        int j;
+                        uv_coord_loop:
+                        j = 0;
+                        for(; line[lineIndex] != ' ' && line[lineIndex] != '\0' && line[lineIndex] != '\n'; j++) {
+                            temp[j] = line[lineIndex++];
+                        }
+                        temp[j] = '\0';
+                        char* succ;
+                        uv[uvIndex++] = strtod(temp, &succ);
+                        lineIndex++;
+                        if (uvIndex < 2) { goto uv_coord_loop; }
 
+                        if (obj->capacityUV < obj->numUV * sizeof(typeof(obj->uv[0]))) {
+                            obj->uv = (float*)realloc(obj->uv, obj->capacityUV += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->uv[0])));
+                            if (obj->uv == NULL) {
+                                printf("[ERROR] Couldnt reallocate uv buffer while parsing file!\n");
+                                return;
+                            }
+                        }
+                        obj->uv[obj->numUV++] = uv[0];
+                        obj->uv[obj->numUV++] = uv[1];
                         break;
                     }
 
