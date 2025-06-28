@@ -9,6 +9,8 @@ int main() {
     fr_Obj cube;
     fr_loadObj("cube.obj", &cube);
 
+    // for debugging
+    fr_printObj(&cube);
 
     fr_freeObj(&cube);
 

@@ -94,8 +94,6 @@ void fr_loadObj(const char *filepath, fr_Obj *obj) {
     }    
 
     fr_parseFile(buffer, obj);
-    fr_printObj(obj);
-
 }
 
 void fr_freeObj(fr_Obj* obj) {
