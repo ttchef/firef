@@ -43,6 +43,11 @@ void fr_freeObj(fr_Obj* obj);
 // internal functions
 char* fr_readFile(const char* filepath, size_t* outBufferSize);
 void fr_parseFile(char* buffer, fr_Obj* obj);
+void fr_printVertices(fr_Obj* obj);
+void fr_printUv(fr_Obj* obj);
+void fr_printNormals(fr_Obj* obj);
+void fr_printIndicies(fr_Obj* obj);;
+void fr_printObj(fr_Obj* obj);
 
 #ifdef __cplusplus
 }
@@ -89,18 +94,10 @@ void fr_loadObj(const char *filepath, fr_Obj *obj) {
 
     fr_parseFile(buffer, obj);
 
-    for (int i = 0; i < obj->numVertices; i+=3) {
-        printf("%d: %f", i/3, obj->vertices[i]);
-        printf(" | %f", obj->vertices[i+1]);
-        printf(" | %f\n", obj->vertices[i+2]);
-    }
 
-    printf("\n\n");
 
-    for (int i = 0; i < obj->numUV; i+=2) {
-        printf("%d: %f", i/2, obj->uv[i]);
-        printf(" | %f\n", obj->uv[i+1]);
-    }
+    
+
 
 }
 
@@ -259,13 +256,40 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
 
                     // Normal
                     case 'n': {
+                        lineIndex++; // get rid of the whitespace
+                        double normals[3];
+                        int normalsIndex = 0;
+                        char temp[FR_MAX_OBJ_LINE_SIZE];
+                        int j;
+                        normals_loop:
+                        j = 0;
+                        for(; line[lineIndex] != ' ' && line[lineIndex] != '\0' && line[lineIndex] != '\n'; j++) {
+                            temp[j] = line[lineIndex++];
+                        }
+                        temp[j] = '\0';
+                        char* succ;
+                        normals[normalsIndex++] = strtod(temp, &succ);
+                        lineIndex++;
+                        if (normalsIndex < 3) { goto normals_loop; }
+
+                        if (obj->capacityNormals < obj->numNormals * sizeof(typeof(obj->normals[0]))) {
+                            obj->normals = (float*)realloc(obj->normals, obj->capacityNormals += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->normals[0])));
+                            if (obj->normals == NULL) {
+                                printf("[ERROR] Couldnt reallocate normals buffer while parsing file!\n");
+                                return;
+                            }
+                        }
+
+                        obj->normals[obj->numNormals++] = normals[0];
+                        obj->normals[obj->numNormals++] = normals[1];
+                        obj->normals[obj->numNormals++] = normals[2];
 
                         break;
                     }
                 }
                 break;
             case 'f': {
-
+                
                 break;
             }
         }
@@ -273,6 +297,45 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
         buffer++;
     }
 
+}
+
+void fr_printVertices(fr_Obj *obj) {
+    printf("-- Vertices --\n");
+    for (int i = 0; i < obj->numVertices; i+=3) {
+        printf("%d: %f", i/3, obj->vertices[i]);
+        printf(" | %f", obj->vertices[i+1]);
+        printf(" | %f\n", obj->vertices[i+2]);
+    }
+}
+
+void fr_printUv(fr_Obj *obj) {
+    printf("-- UV --\n");
+    for (int i = 0; i < obj->numUV; i+=2) {
+        printf("%d: %f", i/2, obj->uv[i]);
+        printf(" | %f\n", obj->uv[i+1]);
+    }
+}
+
+void fr_printNormals(fr_Obj *obj) {
+
+}
+
+void fr_printIndicies(fr_Obj *obj) {
+    printf("-- Normals --\n");
+    for (int i = 0; i < obj->numNormals; i+=3) {
+        printf("%d: %f", i/3, obj->normals[i]);
+        printf(" | %f", obj->normals[i+1]);
+        printf(" | %f\n", obj->normals[i+2]);
+    }
+}
+
+void fr_printObj(fr_Obj *obj) {
+    fr_printVertices(obj);
+    printf("\n\n");
+    fr_printUv(obj);
+    printf("\n\n");
+    fr_printNormals(obj);
+    printf("\n\n");
 }
 
 #endif
