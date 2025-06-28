@@ -380,7 +380,7 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
 }
 
 void fr_printVertices(fr_Obj *obj) {
-    printf("-- Vertices --\n");
+    printf("-- Vertices -- NumVertices: %d\n", obj->numVertices);
     for (int i = 0; i < obj->numVertices; i+=3) {
         printf("%d: %f", i/3, obj->vertices[i]);
         printf(" | %f", obj->vertices[i+1]);
@@ -389,7 +389,7 @@ void fr_printVertices(fr_Obj *obj) {
 }
 
 void fr_printUv(fr_Obj *obj) {
-    printf("-- UV --\n");
+    printf("-- UV -- Num Uv: %d\n", obj->numUV);
     for (int i = 0; i < obj->numUV; i+=2) {
         printf("%d: %f", i/2, obj->uv[i]);
         printf(" | %f\n", obj->uv[i+1]);
@@ -397,7 +397,7 @@ void fr_printUv(fr_Obj *obj) {
 }
 
 void fr_printNormals(fr_Obj *obj) {
-    printf("-- Normals --\n");
+    printf("-- Normals -- NumNormals: %d\n", obj->numNormals);
     for (int i = 0; i < obj->numNormals; i+=3) {
         printf("%d: %f", i/3, obj->normals[i]);
         printf(" | %f", obj->normals[i+1]);
@@ -406,7 +406,7 @@ void fr_printNormals(fr_Obj *obj) {
 }
 
 void fr_printIndicies(fr_Obj *obj) {
-    printf("-- Indicies --\n");
+    printf("-- Indicies -- NumIndicies: %d\n", obj->numIndicies);
     for (int i = 0; i < obj->numIndicies; i+=3) {
         printf("%d: %d", i/3, obj->indicies[i]);
         printf(" | %d", obj->indicies[i+1]);
