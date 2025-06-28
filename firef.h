@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h> 
+#include <string.h> 
 
 #define FIREF_IMPL
 
@@ -93,11 +94,7 @@ void fr_loadObj(const char *filepath, fr_Obj *obj) {
     }    
 
     fr_parseFile(buffer, obj);
-
-
-
-    
-
+    fr_printObj(obj);
 
 }
 
@@ -289,7 +286,37 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                 }
                 break;
             case 'f': {
-                
+                unsigned int indicies[3];
+                int indiciesIndex = 0;
+                int j;
+                indicies_loop:
+                j = 0;
+                char temp[FR_MAX_OBJ_LINE_SIZE];
+                for(; line[lineIndex] != '/' && line[lineIndex] != '\0' && line[lineIndex] != '\n'; j++) {
+                    temp[j] = line[lineIndex++];
+                }
+                temp[j] = '\0';
+                // move to next indicie
+                for(; line[lineIndex] != ' ' && line[lineIndex] != '\0' && line[lineIndex] != '\n'; j++) {
+                    lineIndex++;
+                }
+                char* succ;
+                indicies[indiciesIndex++] = strtoul(temp, &succ, 10) - 1; 
+                lineIndex++;
+                if (indiciesIndex < 3) { goto indicies_loop; }
+
+                if (obj->capacityIndicies < obj->numIndicies * sizeof(typeof(obj->indicies[0]))) {
+                    obj->indicies = (unsigned int*)realloc(obj->indicies, obj->capacityIndicies += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->indicies[0])));
+                    if (obj->indicies == NULL) {
+                        printf("[ERROR] Couldnt reallocate normals buffer while parsing file!\n");
+                        return;
+                    }
+                }
+
+                obj->indicies[obj->numIndicies++] = indicies[0];
+                obj->indicies[obj->numIndicies++] = indicies[1];
+                obj->indicies[obj->numIndicies++] = indicies[2];
+
                 break;
             }
         }
@@ -317,15 +344,20 @@ void fr_printUv(fr_Obj *obj) {
 }
 
 void fr_printNormals(fr_Obj *obj) {
-
-}
-
-void fr_printIndicies(fr_Obj *obj) {
     printf("-- Normals --\n");
     for (int i = 0; i < obj->numNormals; i+=3) {
         printf("%d: %f", i/3, obj->normals[i]);
         printf(" | %f", obj->normals[i+1]);
         printf(" | %f\n", obj->normals[i+2]);
+    }
+}
+
+void fr_printIndicies(fr_Obj *obj) {
+    printf("-- Indicies --\n");
+    for (int i = 0; i < obj->numIndicies; i+=3) {
+        printf("%d: %d", i/3, obj->indicies[i]);
+        printf(" | %d", obj->indicies[i+1]);
+        printf(" | %d\n", obj->indicies[i+2]);
     }
 }
 
@@ -336,6 +368,7 @@ void fr_printObj(fr_Obj *obj) {
     printf("\n\n");
     fr_printNormals(obj);
     printf("\n\n");
+    fr_printIndicies(obj);
 }
 
 #endif
