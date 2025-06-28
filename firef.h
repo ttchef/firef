@@ -20,6 +20,7 @@ extern "C" {
 #define FR_STANDARD_ARRAY_COUNT 200
 #define FR_STANDARD_VERTICES_STEP 128
 #define FR_MAX_OBJ_LINE_SIZE 128
+#define FR_MAX_INDICIES 4 // no support for n-gons
 
 typedef struct {
     unsigned int numVertices;
@@ -172,7 +173,6 @@ char* fr_readFile(const char* filepath, size_t* outBufferSize) {
 
 void fr_parseFile(char *buffer, fr_Obj *obj) {
     
-    int j = 0;
     while (*buffer != '\0') {
         // Generate Line
         char line[FR_MAX_OBJ_LINE_SIZE];
@@ -182,7 +182,7 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
         }
         line[i] = '\0';
         
-        if (i < 2) { continue; }
+        if (i < 2) { buffer++; continue; }
 
         int lineIndex = 0;
         switch (line[lineIndex++]) {
@@ -190,6 +190,12 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                 switch (line[lineIndex++]) {
                     // Vertex Pos
                     case ' ': {
+                        
+                        // Skip whitespace after f 
+                        while (line[lineIndex] == ' ') {
+                            lineIndex++;
+                        }
+
                         double vertex[3];
                         int vertexIndex = 0;
                         char temp[FR_MAX_OBJ_LINE_SIZE];
@@ -205,7 +211,7 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                         lineIndex++;
                         if (vertexIndex < 3) { goto vertex_pos_loop; }
                         
-                        if (obj->capacityVertices < obj->numVertices * sizeof(typeof(obj->vertices[0])))  {
+                        if (obj->capacityVertices < (obj->numVertices + 3) * sizeof(typeof(obj->vertices[0])))  {
                             obj->vertices = (float*)realloc(obj->vertices, obj->capacityVertices += FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertices[0]))); 
                             if (obj->vertices == NULL) {
                                 printf("[ERROR] Couldnt reallocate veritces buffer while parsing file!\n");
@@ -221,7 +227,12 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
 
                     // UV Cordinate
                     case 't': {
-                        lineIndex++; // get rid of the whitespace
+
+                        // Skip whitespace after f 
+                        while (line[lineIndex] == ' ') {
+                            lineIndex++;
+                        }
+
                         double uv[2];
                         int uvIndex = 0;
                         char temp[FR_MAX_OBJ_LINE_SIZE];
@@ -237,7 +248,7 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                         lineIndex++;
                         if (uvIndex < 2) { goto uv_coord_loop; }
 
-                        if (obj->capacityUV < obj->numUV * sizeof(typeof(obj->uv[0]))) {
+                        if (obj->capacityUV < (obj->numUV + 2) * sizeof(typeof(obj->uv[0]))) {
                             obj->uv = (float*)realloc(obj->uv, obj->capacityUV += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->uv[0])));
                             if (obj->uv == NULL) {
                                 printf("[ERROR] Couldnt reallocate uv buffer while parsing file!\n");
@@ -251,7 +262,12 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
 
                     // Normal
                     case 'n': {
-                        lineIndex++; // get rid of the whitespace
+        
+                        // Skip whitespace after f 
+                        while (line[lineIndex] == ' ') {
+                            lineIndex++;
+                        }
+
                         double normals[3];
                         int normalsIndex = 0;
                         char temp[FR_MAX_OBJ_LINE_SIZE];
@@ -267,7 +283,7 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                         lineIndex++;
                         if (normalsIndex < 3) { goto normals_loop; }
 
-                        if (obj->capacityNormals < obj->numNormals * sizeof(typeof(obj->normals[0]))) {
+                        if (obj->capacityNormals < (obj->numNormals + 3) * sizeof(typeof(obj->normals[0]))) {
                             obj->normals = (float*)realloc(obj->normals, obj->capacityNormals += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->normals[0])));
                             if (obj->normals == NULL) {
                                 printf("[ERROR] Couldnt reallocate normals buffer while parsing file!\n");
@@ -284,36 +300,75 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                 }
                 break;
             case 'f': {
-                unsigned int indicies[3];
-                int indiciesIndex = 0;
-                int j;
-                indicies_loop:
-                j = 0;
-                char temp[FR_MAX_OBJ_LINE_SIZE];
-                for(; line[lineIndex] != '/' && line[lineIndex] != '\0' && line[lineIndex] != '\n'; j++) {
-                    temp[j] = line[lineIndex++];
-                }
-                temp[j] = '\0';
-                // move to next indicie
-                for(; line[lineIndex] != ' ' && line[lineIndex] != '\0' && line[lineIndex] != '\n'; j++) {
+
+                // Skip whitespace after f 
+                while (line[lineIndex] == ' ') {
                     lineIndex++;
                 }
-                char* succ;
-                indicies[indiciesIndex++] = strtoul(temp, &succ, 10) - 1; 
-                lineIndex++;
-                if (indiciesIndex < 3) { goto indicies_loop; }
 
-                if (obj->capacityIndicies < obj->numIndicies * sizeof(typeof(obj->indicies[0]))) {
+                // v/vt/vn 
+                // v == indicie
+                unsigned int indicies[FR_MAX_INDICIES];
+                int indiciesIndex = 0;
+
+                while (1) {
+                    
+                    char temp[FR_MAX_OBJ_LINE_SIZE] = {0};
+                    int j = 0;
+
+                    while (line[lineIndex] != '/' && line[lineIndex] != ' ' &&
+                            line[lineIndex] != '\0' && line[lineIndex] != '\n') {
+                        temp[j++] = line[lineIndex++];
+                    }
+
+                    temp[j] = '\0';
+
+                    char* succ;
+                    indicies[indiciesIndex++] = strtoul(temp, &succ, 10) - 1;
+              
+                    // Skip the other things
+                    while (line[lineIndex] != ' ' && (line[lineIndex] != '\0' || line[lineIndex] != '\n')) {
+                        lineIndex++;
+                    }
+
+                    while (line[lineIndex] == ' ') lineIndex++;
+
+                    // 3 Indicies
+                    if (indiciesIndex == 3 && !(line[lineIndex] != '\0' && line[lineIndex] != '\n')) {
+                        break;
+                    }
+                    // 4 Indicies
+                    if (indiciesIndex == 4) { break; }
+
+                }
+
+                if (obj->capacityIndicies < (obj->numIndicies + FR_MAX_INDICIES) * sizeof(typeof(obj->indicies[0]))) {
                     obj->indicies = (unsigned int*)realloc(obj->indicies, obj->capacityIndicies += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->indicies[0])));
                     if (obj->indicies == NULL) {
                         printf("[ERROR] Couldnt reallocate normals buffer while parsing file!\n");
                         return;
                     }
                 }
+                
+                if (indiciesIndex == 3) {
+                    obj->indicies[obj->numIndicies++] = indicies[0];
+                    obj->indicies[obj->numIndicies++] = indicies[1];
+                    obj->indicies[obj->numIndicies++] = indicies[2];
 
-                obj->indicies[obj->numIndicies++] = indicies[0];
-                obj->indicies[obj->numIndicies++] = indicies[1];
-                obj->indicies[obj->numIndicies++] = indicies[2];
+                }
+                else if (indiciesIndex == 4) {
+                    // perform triangulation
+                    obj->indicies[obj->numIndicies++] = indicies[0];
+                    obj->indicies[obj->numIndicies++] = indicies[1];
+                    obj->indicies[obj->numIndicies++] = indicies[2];
+
+                    obj->indicies[obj->numIndicies++] = indicies[0];
+                    obj->indicies[obj->numIndicies++] = indicies[2];
+                    obj->indicies[obj->numIndicies++] = indicies[3];
+                }
+                else {
+                    printf("[ERROR] Invalid Indicies Index!\n");
+                }
 
                 break;
             }
