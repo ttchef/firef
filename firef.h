@@ -389,7 +389,7 @@ void fr_printVertices(fr_Obj *obj) {
 }
 
 void fr_printUv(fr_Obj *obj) {
-    printf("-- UV -- Num Uv: %d\n", obj->numUV);
+    printf("-- UV -- NumUv: %d\n", obj->numUV);
     for (int i = 0; i < obj->numUV; i+=2) {
         printf("%d: %f", i/2, obj->uv[i]);
         printf(" | %f\n", obj->uv[i+1]);
