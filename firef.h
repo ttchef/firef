@@ -376,7 +376,7 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                     while (line[lineIndex] == ' ') lineIndex++;
 
                     // 3 Indicies
-                    if (indiciesIndex == 3 && !(line[lineIndex] != '\0' && line[lineIndex] != '\n')) {
+                    if (line[lineIndex] == '\0' || line[lineIndex] == '\n') {
                         break;
                     }
                     // 4 Indicies
@@ -385,7 +385,7 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                 }
 
                 if (obj->capacityIndicies < (obj->numIndicies + FR_MAX_INDICIES) * sizeof(typeof(obj->indicies[0]))) {
-                    obj->indicies = (unsigned int*)realloc(obj->indicies, obj->capacityIndicies += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->indicies[0])));
+                    obj->indicies = (unsigned int*)realloc(obj->indicies, obj->capacityIndicies += (unsigned int)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->indicies[0])));
                     if (obj->indicies == NULL) {
                         printf("[ERROR] Couldnt reallocate vertex positions (indicies) buffer while parsing file!\n");
                         return;
@@ -414,7 +414,7 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
 
                 if (obj->capacityVertexTextureIndex < (obj->numVertexTextureIndex + FR_MAX_INDICIES) * sizeof(typeof(obj->vertexTextureIndex[0]))) {
                     obj->vertexTextureIndex = (unsigned int*)realloc(obj->vertexTextureIndex,
-                            obj->numVertexTextureIndex += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertexTextureIndex[0])));
+                            obj->numVertexTextureIndex += (unsigned int)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertexTextureIndex[0])));
 
                     if (obj->vertexTextureIndex == NULL) {
                         printf("[ERROR] Couldnt reallocate normals buffer while parsing file!\n");
@@ -443,7 +443,7 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
 
                 if (obj->capacityVertexNormalIndex < (obj->numVertexNormalIndex + FR_MAX_INDICIES) * sizeof(typeof(obj->vertexNormalIndex[0]))) {
                     obj->vertexNormalIndex = (unsigned int*)realloc(obj->vertexNormalIndex,
-                            obj->numVertexNormalIndex += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertexNormalIndex[0])));
+                            obj->numVertexNormalIndex += (unsigned int)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertexNormalIndex[0])));
 
                     if (obj->vertexNormalIndex == NULL) {
                         printf("[ERROR] Couldnt reallocate normals buffer while parsing file!\n");
@@ -451,12 +451,12 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                     }
                 }
                 
-                if (textureIndex == 3) {
+                if (normalIndex == 3) {
                     obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[0];
                     obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[1];
                     obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[2];
                 }
-                else if (textureIndex == 4) {
+                else if (normalIndex == 4) {
                     // perform triangulation
                     obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[0];
                     obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[1];
@@ -536,7 +536,7 @@ void fr_printVertexNormalIndex(fr_Obj *obj) {
 void fr_printFaces(fr_Obj *obj) {   
     printf("-- Faces -- NumFaces: %d\n", obj->numIndicies / 3);
     for (int i = 0; i < obj->numIndicies; i+=3) {
-        printf("%d Face: %d/%d   |   ", i / 3, obj->indicies[i], obj->vertexTextureIndex[i], obj->vertexNormalIndex[i]);
+        printf("%d Face: %d/%d/%d  |   ", i / 3, obj->indicies[i], obj->vertexTextureIndex[i], obj->vertexNormalIndex[i]);
         printf("%d/%d/%d   |   ", obj->indicies[i+1], obj->vertexTextureIndex[i+1], obj->vertexNormalIndex[i+1]);
         printf("%d/%d/%d\n", obj->indicies[i+2], obj->vertexTextureIndex[i+2], obj->vertexNormalIndex[i+2]);
     }
