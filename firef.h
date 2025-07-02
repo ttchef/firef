@@ -96,11 +96,15 @@ void fr_loadObj(const char *filepath, fr_Obj *obj) {
     obj->numUV = 0;
     obj->numNormals = 0;
     obj->numIndicies = 0;
+    obj->numVertexTextureIndex = 0;
+    obj->numVertexNormalIndex = 0;
 
     obj->capacityVertices = sizeof(float) * FR_STANDARD_ARRAY_COUNT;
     obj->capacityUV = sizeof(float) * FR_STANDARD_ARRAY_COUNT;
     obj->capacityNormals = sizeof(float) * FR_STANDARD_ARRAY_COUNT;
     obj->capacityIndicies = sizeof(unsigned int) * FR_STANDARD_ARRAY_COUNT;
+    obj->capacityVertexTextureIndex = sizeof(unsigned int) * FR_STANDARD_ARRAY_COUNT;
+    obj->capacityVertexNormalIndex = sizeof(unsigned int) * FR_STANDARD_ARRAY_COUNT;
 
     size_t bufferSize = 0;
     char* buffer = fr_readFile(filepath, &bufferSize);
