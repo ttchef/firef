@@ -27,20 +27,32 @@ typedef struct {
     unsigned int numUV;
     unsigned int numNormals;
     unsigned int numIndicies;
+    unsigned int numVertexTextureIndex;
+    unsigned int numVertexNormalIndex;
 
     unsigned int capacityVertices;
     unsigned int capacityUV;
     unsigned int capacityNormals;
     unsigned int capacityIndicies;
+    unsigned int capacityVertexTextureIndex;
+    unsigned int capacityVertexNormalIndex;
 
     float* vertices;
     float* uv;
     float* normals;
     unsigned int* indicies;
+    unsigned int* vertexTextureIndex;
+    unsigned int* vertexNormalIndex;
 } fr_Obj;
+
+typedef struct {
+    float* array;
+    unsigned int size;
+} fr_ArrayFloat;
 
 void fr_loadObj(const char* filepath, fr_Obj* obj);
 void fr_freeObj(fr_Obj* obj);
+fr_ArrayFloat fr_mergeVerticesNormals(fr_Obj* obj); // needs to be freed
 
 // internal functions
 char* fr_readFile(const char* filepath, size_t* outBufferSize);
@@ -49,6 +61,9 @@ void fr_printVertices(fr_Obj* obj);
 void fr_printUv(fr_Obj* obj);
 void fr_printNormals(fr_Obj* obj);
 void fr_printIndicies(fr_Obj* obj);;
+void fr_printVertexTextureIndex(fr_Obj* obj);
+void fr_printVertexNormalIndex(fr_Obj* obj);
+void fr_printFaces(fr_Obj* obj);
 void fr_printObj(fr_Obj* obj);
 
 #ifdef __cplusplus
@@ -64,11 +79,15 @@ void fr_loadObj(const char *filepath, fr_Obj *obj) {
     obj->uv = (float*)malloc(FR_STANDARD_ARRAY_COUNT * sizeof(float));
     obj->normals = (float*)malloc(FR_STANDARD_ARRAY_COUNT * sizeof(float));
     obj->indicies = (unsigned int*)malloc(FR_STANDARD_ARRAY_COUNT * sizeof(unsigned int));
+    obj->vertexTextureIndex = (unsigned int*)malloc(FR_STANDARD_ARRAY_COUNT * sizeof(unsigned int));
+    obj->vertexNormalIndex = (unsigned int*)malloc(FR_STANDARD_ARRAY_COUNT * sizeof(unsigned int));
 
     if (obj->vertices == NULL ||
         obj->uv == NULL ||
         obj->normals == NULL || 
-        obj->indicies == NULL) {
+        obj->indicies == NULL ||
+        obj->vertexTextureIndex == NULL ||
+        obj->vertexNormalIndex == NULL) {
         printf("[ERROR] Couldnt Allocate Default Memory for fr_Obj Arrays!\n");
         return;
     }
@@ -98,10 +117,12 @@ void fr_loadObj(const char *filepath, fr_Obj *obj) {
 }
 
 void fr_freeObj(fr_Obj* obj) {
-    if (obj->vertices != NULL)  free(obj->vertices);
-    if (obj->uv != NULL)        free(obj->uv);
-    if (obj->normals != NULL)   free(obj->normals);
-    if (obj->indicies != NULL)  free(obj->indicies);
+    if (obj->vertices != NULL)              free(obj->vertices);
+    if (obj->uv != NULL)                    free(obj->uv);
+    if (obj->normals != NULL)               free(obj->normals);
+    if (obj->indicies != NULL)              free(obj->indicies);
+    if (obj->vertexTextureIndex != NULL)    free(obj->vertexTextureIndex);
+    if (obj->vertexNormalIndex != NULL)     free(obj->vertexNormalIndex);
 }
 
 char* fr_readFile(const char* filepath, size_t* outBufferSize) {
@@ -309,7 +330,11 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                 // v/vt/vn 
                 // v == indicie
                 unsigned int indicies[FR_MAX_INDICIES];
+                unsigned int textureI[FR_MAX_INDICIES];
+                unsigned int normalI[FR_MAX_INDICIES];
                 int indiciesIndex = 0;
+                int textureIndex = 0;
+                int normalIndex = 0;
 
                 while (1) {
                     
@@ -325,11 +350,24 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
 
                     char* succ;
                     indicies[indiciesIndex++] = strtoul(temp, &succ, 10) - 1;
-              
-                    // Skip the other things
-                    while (line[lineIndex] != ' ' && line[lineIndex] != '\0' && line[lineIndex] != '\n') {
-                        lineIndex++;
+
+                    j = 0;
+                    lineIndex++;
+                    while (line[lineIndex] != '/' && line[lineIndex] != ' ' &&
+                        line[lineIndex] != '\0' && line[lineIndex] != '\n') {
+                        temp[j++] = line[lineIndex++];
                     }
+
+                    textureI[textureIndex++] = strtoul(temp, &succ, 10) - 1;
+
+                    j = 0;
+                    lineIndex++;
+                    while (line[lineIndex] != ' ' &&
+                        line[lineIndex] != '\0' && line[lineIndex] != '\n') {
+                        temp[j++] = line[lineIndex++];
+                    }
+    
+                    normalI[normalIndex++] = strtoul(temp, &succ, 10) - 1;
 
                     while (line[lineIndex] == ' ') lineIndex++;
 
@@ -345,7 +383,7 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                 if (obj->capacityIndicies < (obj->numIndicies + FR_MAX_INDICIES) * sizeof(typeof(obj->indicies[0]))) {
                     obj->indicies = (unsigned int*)realloc(obj->indicies, obj->capacityIndicies += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->indicies[0])));
                     if (obj->indicies == NULL) {
-                        printf("[ERROR] Couldnt reallocate normals buffer while parsing file!\n");
+                        printf("[ERROR] Couldnt reallocate vertex positions (indicies) buffer while parsing file!\n");
                         return;
                     }
                 }
@@ -369,6 +407,65 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                 else {
                     printf("[ERROR] Invalid Indicies Index!\n");
                 }
+
+                if (obj->capacityVertexTextureIndex < (obj->numVertexTextureIndex + FR_MAX_INDICIES) * sizeof(typeof(obj->vertexTextureIndex[0]))) {
+                    obj->vertexTextureIndex = (unsigned int*)realloc(obj->vertexTextureIndex,
+                            obj->numVertexTextureIndex += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertexTextureIndex[0])));
+
+                    if (obj->vertexTextureIndex == NULL) {
+                        printf("[ERROR] Couldnt reallocate normals buffer while parsing file!\n");
+                        return;
+                    }
+                }
+                
+                if (textureIndex == 3) {
+                    obj->vertexTextureIndex[obj->numVertexTextureIndex++] = textureI[0];
+                    obj->vertexTextureIndex[obj->numVertexTextureIndex++] = textureI[1];
+                    obj->vertexTextureIndex[obj->numVertexTextureIndex++] = textureI[2];
+                }
+                else if (textureIndex == 4) {
+                    // perform triangulation
+                    obj->vertexTextureIndex[obj->numVertexTextureIndex++] = textureI[0];
+                    obj->vertexTextureIndex[obj->numVertexTextureIndex++] = textureI[1];
+                    obj->vertexTextureIndex[obj->numVertexTextureIndex++] = textureI[2];
+
+                    obj->vertexTextureIndex[obj->numVertexTextureIndex++] = textureI[0];
+                    obj->vertexTextureIndex[obj->numVertexTextureIndex++] = textureI[2];
+                    obj->vertexTextureIndex[obj->numVertexTextureIndex++] = textureI[3];
+                }
+                else {
+                    printf("[ERROR] Invalid Indicies for texture Index!\n");
+                }
+
+                if (obj->capacityVertexNormalIndex < (obj->numVertexNormalIndex + FR_MAX_INDICIES) * sizeof(typeof(obj->vertexNormalIndex[0]))) {
+                    obj->vertexNormalIndex = (unsigned int*)realloc(obj->vertexNormalIndex,
+                            obj->numVertexNormalIndex += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertexNormalIndex[0])));
+
+                    if (obj->vertexNormalIndex == NULL) {
+                        printf("[ERROR] Couldnt reallocate normals buffer while parsing file!\n");
+                        return;
+                    }
+                }
+                
+                if (textureIndex == 3) {
+                    obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[0];
+                    obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[1];
+                    obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[2];
+                }
+                else if (textureIndex == 4) {
+                    // perform triangulation
+                    obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[0];
+                    obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[1];
+                    obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[2];
+
+                    obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[0];
+                    obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[2];
+                    obj->vertexNormalIndex[obj->numVertexNormalIndex++] = normalI[3];
+                }
+                else {
+                    printf("[ERROR] Invalid Indicies for texture Index!\n");
+                }
+
 
                 break;
             }
@@ -414,6 +511,33 @@ void fr_printIndicies(fr_Obj *obj) {
     }
 }
 
+void fr_printVertexTextureIndex(fr_Obj *obj) {
+    printf("-- VertexTextureIndex -- NumVertexTextureIndex: %d\n", obj->numVertexTextureIndex);
+    for (int i = 0; i < obj->numVertexTextureIndex; i+=3) {
+        printf("%d: %d", i/3, obj->vertexTextureIndex[i]);
+        printf(" | %d", obj->vertexTextureIndex[i+1]);
+        printf(" | %d\n", obj->vertexTextureIndex[i+2]);
+    }
+}
+
+void fr_printVertexNormalIndex(fr_Obj *obj) {
+    printf("-- VertexNormalIndex -- NumVertexNormalIndex: %d\n", obj->numVertexNormalIndex);
+    for (int i = 0; i < obj->numVertexNormalIndex; i+=3) {
+        printf("%d: %d", i/3, obj->vertexNormalIndex[i]);
+        printf(" | %d", obj->vertexNormalIndex[i+1]);
+        printf(" | %d\n", obj->vertexNormalIndex[i+2]);
+    }
+}
+
+void fr_printFaces(fr_Obj *obj) {   
+    printf("-- Faces -- NumFaces: %d\n", obj->numIndicies / 3);
+    for (int i = 0; i < obj->numIndicies; i+=3) {
+        printf("%d Face: %d/%d   |   ", i / 3, obj->indicies[i], obj->vertexTextureIndex[i], obj->vertexNormalIndex[i]);
+        printf("%d/%d/%d   |   ", obj->indicies[i+1], obj->vertexTextureIndex[i+1], obj->vertexNormalIndex[i+1]);
+        printf("%d/%d/%d\n", obj->indicies[i+2], obj->vertexTextureIndex[i+2], obj->vertexNormalIndex[i+2]);
+    }
+}
+
 void fr_printObj(fr_Obj *obj) {
     fr_printVertices(obj);
     printf("\n\n");
@@ -421,7 +545,38 @@ void fr_printObj(fr_Obj *obj) {
     printf("\n\n");
     fr_printNormals(obj);
     printf("\n\n");
-    fr_printIndicies(obj);
+    fr_printFaces(obj);
+}
+
+// needs to be freed
+fr_ArrayFloat fr_mergeVerticesNormals(fr_Obj* obj) {
+    unsigned int numFaces = obj->numIndicies / 3;
+    unsigned int size = obj->numIndicies + obj->numVertices;
+    float* array = (float*)malloc(sizeof(float) * size);
+    if (array == NULL) {
+        printf("[ERROR] Couldnt allocate memory for vertices and normal merging!\n");
+        return (fr_ArrayFloat){
+            .array = NULL,
+            .size = 0
+        };
+    }
+
+    int index = 0;
+    while (index < size) {
+        array[index] = obj->vertices[index];
+        array[index] = obj->vertices[index + 1];
+        array[index] = obj->vertices[index + 2];
+        
+        array[index] = obj->normals[index];
+        array[index] = obj->normals[index + 1];
+        array[index] = obj->normals[index + 2];
+        index += 6;
+    }
+    
+    return (fr_ArrayFloat){
+        .array = array,
+        .size = size
+    };
 }
 
 #endif

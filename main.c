@@ -12,6 +12,9 @@ int main() {
     // for debugging
     fr_printObj(&cube);
 
+    //fr_ArrayFloat test = fr_mergeVerticesNormals(&cube);
+
+
     fr_freeObj(&cube);
 
     return 0;
