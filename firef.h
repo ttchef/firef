@@ -8,8 +8,6 @@
 #include <ctype.h> 
 #include <stdbool.h> 
 
-#define FIREF_IMPL
-
 #ifdef __cplusplus 
 extern "C" {
 #endif
@@ -54,7 +52,8 @@ typedef struct {
 
 void fr_loadObj(const char* filepath, fr_Obj* obj);
 void fr_freeObj(fr_Obj* obj);
-fr_ArrayFloat fr_mergeArrays(fr_Obj* obj); // needs to be freed
+fr_ArrayFloat fr_mergeArrays(fr_Obj* obj); // needs to be freed 
+void fr_freeArrayFloat(fr_ArrayFloat* obj);
 
 // internal functions
 char* fr_readFile(const char* filepath, size_t* outBufferSize);
@@ -656,6 +655,11 @@ fr_ArrayFloat fr_mergeArrays(fr_Obj* obj) {
         .array = array,
         .size = size
     };
+}
+
+void fr_freeArrayFloat(fr_ArrayFloat *obj) {
+    free(obj->array);
+    obj->array = NULL;
 }
 
 #endif
