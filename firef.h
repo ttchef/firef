@@ -369,6 +369,8 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                         temp[j++] = line[lineIndex++];
                     }
 
+                    temp[j] = '\0';
+
                     textureI[textureIndex++] = strtoul(temp, &succ, 10) - 1;
 
                     j = 0;
@@ -378,6 +380,8 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                         temp[j++] = line[lineIndex++];
                     }
     
+                    temp[j] = '\0';
+
                     normalI[normalIndex++] = strtoul(temp, &succ, 10) - 1;
 
                     while (line[lineIndex] == ' ') lineIndex++;
