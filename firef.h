@@ -6,6 +6,7 @@
 #include <stdlib.h> 
 #include <string.h> 
 #include <ctype.h> 
+#include <stdbool.h> 
 
 #define FIREF_IMPL
 
@@ -53,7 +54,7 @@ typedef struct {
 
 void fr_loadObj(const char* filepath, fr_Obj* obj);
 void fr_freeObj(fr_Obj* obj);
-fr_ArrayFloat fr_mergeVerticesNormals(fr_Obj* obj); // needs to be freed
+fr_ArrayFloat fr_mergeArrays(fr_Obj* obj); // needs to be freed
 
 // internal functions
 char* fr_readFile(const char* filepath, size_t* outBufferSize);
@@ -66,6 +67,8 @@ void fr_printVertexTextureIndex(fr_Obj* obj);
 void fr_printVertexNormalIndex(fr_Obj* obj);
 void fr_printFaces(fr_Obj* obj);
 void fr_printObj(fr_Obj* obj);
+void fr_printArrayFloat(fr_ArrayFloat* array);
+void fr_printArrayFloatMoreInfo(fr_ArrayFloat* array, fr_Obj* derivedObj);
 
 #ifdef __cplusplus
 }
@@ -567,11 +570,50 @@ void fr_printObj(fr_Obj *obj) {
     fr_printFaces(obj);
 }
 
+void fr_printArrayFloat(fr_ArrayFloat *array) {
+    printf("-- ArrayFloat -- Size: %d\n", array->size);
+    for (int i = 0; i < array->size; i++) {
+        printf("%d: %f\n", i, array->array[i]);
+    }
+}
+
+void fr_printArrayFloatMoreInfo(fr_ArrayFloat *array, fr_Obj *derivedObj) {
+    printf("-- ArrayFloatMoreInfo -- Size: %d\n", array->size);
+    unsigned int outIndex = 0;
+    for (int i = 0; i < array->size; i++) {
+        printf("%d: %f |", i, array->array[outIndex++]);
+        printf(" %f |", array->array[outIndex++]);
+        printf(" %f ", array->array[outIndex++]);
+
+        if (derivedObj->numUV != 0) {
+            printf("| %f ", array->array[outIndex++]);
+            printf("| %f ", array->array[outIndex++]);
+        }
+
+        if (derivedObj->numNormals != 0) {
+            printf("| %f ", array->array[outIndex++]);
+            printf("| %f ", array->array[outIndex++]);
+            printf("| %f ", array->array[outIndex++]);
+        }
+
+        printf("\n");
+
+    }
+
+}
+
 // needs to be freed
-fr_ArrayFloat fr_mergeVerticesNormals(fr_Obj* obj) {
-    unsigned int numFaces = obj->numIndicies / 3;
-    unsigned int size = obj->numIndicies + obj->numVertices;
-    float* array = (float*)malloc(sizeof(float) * size);
+fr_ArrayFloat fr_mergeArrays(fr_Obj* obj) {
+
+    const bool hasUV = obj->numUV != 0;
+    const bool hasNormals = obj->numNormals != 0;
+
+    const unsigned int size = obj->numIndicies / 3;
+    const unsigned int stride = 3 + (hasUV ? 2 : 0) + (hasNormals ? 3 : 0);
+    const unsigned int totalSize = size * stride;
+
+    float* array = (float*)malloc(sizeof(float) * totalSize);
+
     if (array == NULL) {
         printf("[ERROR] Couldnt allocate memory for vertices and normal merging!\n");
         return (fr_ArrayFloat){
@@ -580,18 +622,36 @@ fr_ArrayFloat fr_mergeVerticesNormals(fr_Obj* obj) {
         };
     }
 
-    int index = 0;
-    while (index < size) {
-        array[index] = obj->vertices[index];
-        array[index] = obj->vertices[index + 1];
-        array[index] = obj->vertices[index + 2];
-        
-        array[index] = obj->normals[index];
-        array[index] = obj->normals[index + 1];
-        array[index] = obj->normals[index + 2];
-        index += 6;
+    unsigned int outIndex = 0;
+
+    for (int i = 0; i < size; i++) {
+
+        const unsigned int vertexIndex = obj->indicies[i];
+        const unsigned int vOffset = vertexIndex * 3;
+
+        array[outIndex++] = obj->vertices[vOffset];
+        array[outIndex++] = obj->vertices[vOffset + 1];
+        array[outIndex++] = obj->vertices[vOffset + 2];
+
+        if (hasUV) {
+            const unsigned int uvIndex = obj->vertexTextureIndex[i];
+            const unsigned int uvOffset = uvIndex * 2;
+
+            array[outIndex++] = obj->uv[uvOffset];
+            array[outIndex++] = obj->uv[uvOffset + 1];
+        }
+
+        if (hasNormals) {
+            const unsigned int normIndex = obj->vertexNormalIndex[i];
+            const unsigned int normOffset = normIndex * 3;
+
+            array[outIndex++] = obj->normals[normOffset];
+            array[outIndex++] = obj->normals[normOffset + 1];
+            array[outIndex++] = obj->normals[normOffset + 2];
+        }
     }
-    
+
+           
     return (fr_ArrayFloat){
         .array = array,
         .size = size

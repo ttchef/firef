@@ -10,10 +10,10 @@ int main() {
     fr_loadObj("cube.obj", &cube);
 
     // for debugging
-    fr_printObj(&cube);
+    //fr_printObj(&cube);
 
-    //fr_ArrayFloat test = fr_mergeVerticesNormals(&cube);
-
+    fr_ArrayFloat test = fr_mergeArrays(&cube);
+    fr_printArrayFloatMoreInfo(&test, &cube);
 
     fr_freeObj(&cube);
 
