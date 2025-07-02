@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h> 
+#include <ctype.h> 
 
 #define FIREF_IMPL
 
@@ -237,11 +238,13 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                         if (vertexIndex < 3) { goto vertex_pos_loop; }
                         
                         if (obj->capacityVertices < (obj->numVertices + 3) * sizeof(typeof(obj->vertices[0])))  {
-                            obj->vertices = (float*)realloc(obj->vertices, obj->capacityVertices += FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertices[0]))); 
+                            unsigned int newCapacity = obj->capacityVertices + FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertices[0]));
+                            obj->vertices = (float*)realloc(obj->vertices, newCapacity); 
                             if (obj->vertices == NULL) {
                                 printf("[ERROR] Couldnt reallocate veritces buffer while parsing file!\n");
                                 return;
                             }
+                            obj->capacityVertices = newCapacity;
                         }
                         obj->vertices[obj->numVertices++] = vertex[0];
                         obj->vertices[obj->numVertices++] = vertex[1];
@@ -274,11 +277,13 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                         if (uvIndex < 2) { goto uv_coord_loop; }
 
                         if (obj->capacityUV < (obj->numUV + 2) * sizeof(typeof(obj->uv[0]))) {
-                            obj->uv = (float*)realloc(obj->uv, obj->capacityUV += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->uv[0])));
+                            unsigned int newCapacity = obj->capacityUV + FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->uv[0]));
+                            obj->uv = (float*)realloc(obj->uv, newCapacity);
                             if (obj->uv == NULL) {
                                 printf("[ERROR] Couldnt reallocate uv buffer while parsing file!\n");
                                 return;
                             }
+                            obj->capacityUV = newCapacity;
                         }
                         obj->uv[obj->numUV++] = uv[0];
                         obj->uv[obj->numUV++] = uv[1];
@@ -309,11 +314,13 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                         if (normalsIndex < 3) { goto normals_loop; }
 
                         if (obj->capacityNormals < (obj->numNormals + 3) * sizeof(typeof(obj->normals[0]))) {
-                            obj->normals = (float*)realloc(obj->normals, obj->capacityNormals += (float)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->normals[0])));
+                            unsigned int newCapacity = obj->capacityNormals + FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->normals[0]));
+                            obj->normals = (float*)realloc(obj->normals, newCapacity);
                             if (obj->normals == NULL) {
                                 printf("[ERROR] Couldnt reallocate normals buffer while parsing file!\n");
                                 return;
                             }
+                            obj->capacityNormals = newCapacity;
                         }
 
                         obj->normals[obj->numNormals++] = normals[0];
@@ -366,7 +373,7 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
 
                     j = 0;
                     lineIndex++;
-                    while (line[lineIndex] != ' ' &&
+                    while (isdigit(line[lineIndex]) && line[lineIndex] != ' ' &&
                         line[lineIndex] != '\0' && line[lineIndex] != '\n') {
                         temp[j++] = line[lineIndex++];
                     }
@@ -385,11 +392,13 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                 }
 
                 if (obj->capacityIndicies < (obj->numIndicies + FR_MAX_INDICIES) * sizeof(typeof(obj->indicies[0]))) {
-                    obj->indicies = (unsigned int*)realloc(obj->indicies, obj->capacityIndicies += (unsigned int)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->indicies[0])));
+                    unsigned int newCapacity = obj->capacityIndicies + FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->indicies[0]));
+                    obj->indicies = (unsigned int*)realloc(obj->indicies, newCapacity);
                     if (obj->indicies == NULL) {
                         printf("[ERROR] Couldnt reallocate vertex positions (indicies) buffer while parsing file!\n");
                         return;
                     }
+                    obj->capacityIndicies = newCapacity;
                 }
                 
                 if (indiciesIndex == 3) {
@@ -413,13 +422,14 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                 }
 
                 if (obj->capacityVertexTextureIndex < (obj->numVertexTextureIndex + FR_MAX_INDICIES) * sizeof(typeof(obj->vertexTextureIndex[0]))) {
-                    obj->vertexTextureIndex = (unsigned int*)realloc(obj->vertexTextureIndex,
-                            obj->numVertexTextureIndex += (unsigned int)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertexTextureIndex[0])));
+                    unsigned int newCapacity = obj->capacityVertexTextureIndex + FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertexTextureIndex[0]));
+                    obj->vertexTextureIndex = (unsigned int*)realloc(obj->vertexTextureIndex, newCapacity);
 
                     if (obj->vertexTextureIndex == NULL) {
                         printf("[ERROR] Couldnt reallocate normals buffer while parsing file!\n");
                         return;
                     }
+                    obj->capacityVertexTextureIndex = newCapacity;
                 }
                 
                 if (textureIndex == 3) {
@@ -442,13 +452,14 @@ void fr_parseFile(char *buffer, fr_Obj *obj) {
                 }
 
                 if (obj->capacityVertexNormalIndex < (obj->numVertexNormalIndex + FR_MAX_INDICIES) * sizeof(typeof(obj->vertexNormalIndex[0]))) {
-                    obj->vertexNormalIndex = (unsigned int*)realloc(obj->vertexNormalIndex,
-                            obj->numVertexNormalIndex += (unsigned int)FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertexNormalIndex[0])));
+                    unsigned int newCapacity = obj->capacityVertexNormalIndex + FR_STANDARD_VERTICES_STEP * sizeof(typeof(obj->vertexNormalIndex[0]));
+                    obj->vertexNormalIndex = (unsigned int*)realloc(obj->vertexNormalIndex, newCapacity);
 
                     if (obj->vertexNormalIndex == NULL) {
                         printf("[ERROR] Couldnt reallocate normals buffer while parsing file!\n");
                         return;
                     }
+                    obj->capacityVertexNormalIndex = newCapacity;
                 }
                 
                 if (normalIndex == 3) {
