@@ -43,11 +43,15 @@ typedef struct {
     unsigned int* indicies;
     unsigned int* vertexTextureIndex;
     unsigned int* vertexNormalIndex;
+
+
 } fr_Obj;
 
 typedef struct {
     float* array;
     unsigned int size;
+    unsigned int numFaces;
+    unsigned int numFloates;
 } fr_ArrayFloat;
 
 void fr_loadObj(const char* filepath, fr_Obj* obj);
@@ -610,6 +614,9 @@ fr_ArrayFloat fr_mergeArrays(fr_Obj* obj) {
     const unsigned int size = obj->numIndicies / 3;
     const unsigned int stride = 3 + (hasUV ? 2 : 0) + (hasNormals ? 3 : 0);
     const unsigned int totalSize = size * stride;
+
+    obj->numFaces = size;
+    obj->numFloates = totalSize;
 
     float* array = (float*)malloc(sizeof(float) * totalSize);
 
