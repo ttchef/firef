@@ -50,8 +50,7 @@ typedef struct {
 typedef struct {
     float* array;
     unsigned int size;
-    unsigned int numFaces;
-    unsigned int numFloates;
+    unsigned int numFloats;
 } fr_ArrayFloat;
 
 void fr_loadObj(const char* filepath, fr_Obj* obj);
@@ -612,11 +611,8 @@ fr_ArrayFloat fr_mergeArrays(fr_Obj* obj) {
     const bool hasNormals = obj->numNormals != 0;
 
     const unsigned int size = obj->numIndicies / 3;
-    const unsigned int stride = 3 + (hasUV ? 2 : 0) + (hasNormals ? 3 : 0);
+    const unsigned int stride = 3 + 2 + 3;
     const unsigned int totalSize = size * stride;
-
-    obj->numFaces = size;
-    obj->numFloates = totalSize;
 
     float* array = (float*)malloc(sizeof(float) * totalSize);
 
@@ -624,7 +620,8 @@ fr_ArrayFloat fr_mergeArrays(fr_Obj* obj) {
         printf("[ERROR] Couldnt allocate memory for vertices and normal merging!\n");
         return (fr_ArrayFloat){
             .array = NULL,
-            .size = 0
+            .size = 0,
+            .numFloats = 0
         };
     }
 
@@ -642,9 +639,11 @@ fr_ArrayFloat fr_mergeArrays(fr_Obj* obj) {
         if (hasUV) {
             const unsigned int uvIndex = obj->vertexTextureIndex[i];
             const unsigned int uvOffset = uvIndex * 2;
-
             array[outIndex++] = obj->uv[uvOffset];
             array[outIndex++] = obj->uv[uvOffset + 1];
+        } else {
+            array[outIndex++] = 0;
+            array[outIndex++] = 0;
         }
 
         if (hasNormals) {
@@ -654,13 +653,18 @@ fr_ArrayFloat fr_mergeArrays(fr_Obj* obj) {
             array[outIndex++] = obj->normals[normOffset];
             array[outIndex++] = obj->normals[normOffset + 1];
             array[outIndex++] = obj->normals[normOffset + 2];
+        } else {
+            array[outIndex++] = 0.0f;
+            array[outIndex++] = 0.0f;
+            array[outIndex++] = 0.0f;
         }
     }
 
            
     return (fr_ArrayFloat){
         .array = array,
-        .size = size
+        .size = size,
+        .numFloats = totalSize
     };
 }
 
