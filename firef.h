@@ -1,11 +1,10 @@
-
 #ifndef FIREF_H
 #define FIREF_H 
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
+#include <ctype.h> // Für isspace hinzufügen
 
 #define FIREF_IMPL
 
@@ -21,6 +20,7 @@ typedef struct {
     size_t index_count;
 } Obj;
 
+// Diese bleiben unverändert, da strtof und strtol selbst robust sind
 static inline float parse_float(const char *s) {
     return strtof(s, NULL);
 }
@@ -55,34 +55,63 @@ Obj load_obj(const char *path) {
     unsigned int vertex_counter = 0;
 
     while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "v ", 2) == 0 || strncmp(line, "vt", 2) == 0 || strncmp(line, "vn", 2) == 0) {
-            float x = 0, y = 0, z = 0;
-            if (line[1] == ' ') {
-                sscanf(line + 2, "%f %f %f", &x, &y, &z);
-                float *tmp = (float*)realloc(positions, (pos_len + 3) * sizeof(float));
-                if (!tmp) exit(1);
-                positions = tmp;
-                positions[pos_len++] = x;
-                positions[pos_len++] = y;
-                positions[pos_len++] = z;
-            } else if (line[1] == 't') {
-                sscanf(line + 3, "%f %f", &x, &y);
-                float *tmp = (float*)realloc(uvs, (uv_len + 2) * sizeof(float));
-                if (!tmp) exit(1);
-                uvs = tmp;
-                uvs[uv_len++] = x;
-                uvs[uv_len++] = y;
-            } else if (line[1] == 'n') {
-                sscanf(line + 3, "%f %f %f", &x, &y, &z);
-                float *tmp = (float*)realloc(normals, (norm_len + 3) * sizeof(float));
-                if (!tmp) exit(1);
-                normals = tmp;
-                normals[norm_len++] = x;
-                normals[norm_len++] = y;
-                normals[norm_len++] = z;
-            }
-        } else if (strncmp(line, "f ", 2) == 0) {
-           char *token = strtok(line + 2, " \n");
+        char* p = line; // Pointer auf den Anfang der aktuellen Zeile
+        char* end_ptr = NULL;
+        float x = 0, y = 0, z = 0; 
+
+        // 1. Alle führenden Leerzeichen auf der Zeile überspringen
+        while (isspace(*p) && *p != '\n' && *p != '\0') p++;
+
+        // 2. Den Befehl identifizieren
+        if (strncmp(p, "v", 1) == 0 && isspace(p[1])) { // "v" gefolgt von einem beliebigen Leerzeichen
+            p += 1; // Zeiger nach dem 'v'
+            while (isspace(*p)) p++; // Alle Leerzeichen zwischen 'v' und der ersten Zahl überspringen
+            x = strtof(p, &end_ptr); p = end_ptr;
+            while (isspace(*p)) p++; // Leerzeichen zwischen den Zahlen überspringen
+            y = strtof(p, &end_ptr); p = end_ptr;
+            while (isspace(*p)) p++;
+            z = strtof(p, &end_ptr); 
+
+            float *tmp = (float*)realloc(positions, (pos_len + 3) * sizeof(float));
+            if (!tmp) exit(1);
+            positions = tmp;
+            positions[pos_len++] = x;
+            positions[pos_len++] = y;
+            positions[pos_len++] = z;
+        } else if (strncmp(p, "vt", 2) == 0 && isspace(p[2])) { // "vt" gefolgt von einem beliebigen Leerzeichen
+            p += 2; // Zeiger nach "vt"
+            while (isspace(*p)) p++;
+            x = strtof(p, &end_ptr); p = end_ptr;
+            while (isspace(*p)) p++;
+            y = strtof(p, &end_ptr);
+
+            float *tmp = (float*)realloc(uvs, (uv_len + 2) * sizeof(float));
+            if (!tmp) exit(1);
+            uvs = tmp;
+            uvs[uv_len++] = x;
+            uvs[uv_len++] = y;
+        } else if (strncmp(p, "vn", 2) == 0 && isspace(p[2])) { // "vn" gefolgt von einem beliebigen Leerzeichen
+            p += 2; // Zeiger nach "vn"
+            while (isspace(*p)) p++;
+            x = strtof(p, &end_ptr); p = end_ptr;
+            while (isspace(*p)) p++;
+            y = strtof(p, &end_ptr); p = end_ptr;
+            while (isspace(*p)) p++;
+            z = strtof(p, &end_ptr);
+
+            float *tmp = (float*)realloc(normals, (norm_len + 3) * sizeof(float));
+            if (!tmp) exit(1);
+            normals = tmp;
+            normals[norm_len++] = x;
+            normals[norm_len++] = y;
+            normals[norm_len++] = z;
+        } else if (strncmp(p, "f", 1) == 0 && isspace(p[1])) { // "f" gefolgt von einem beliebigen Leerzeichen
+            // Für "f" Zeilen nutzen wir strtok, das selbst Leerzeichen am Anfang des Tokens handhabt.
+            // Der Startpunkt für strtok muss aber auch nach dem 'f' und den ersten Leerzeichen sein.
+            char *face_data_start = p + 1; // Zeiger nach dem 'f'
+            while(isspace(*face_data_start)) face_data_start++; // Alle Leerzeichen nach dem 'f' überspringen
+
+            char *token = strtok(face_data_start, " \n"); // strtok startet hier mit dem Parsen
             unsigned int face[32]; // Max 32 vertices per face
             int count = 0;
 
@@ -93,43 +122,36 @@ Obj load_obj(const char *path) {
                 int current_ni = -1;
 
                 char* p_token = token;
-                char* end_ptr;
+                char* end_ptr_face; // Separater end_ptr für Face-Parsing
 
                 // 1. Vertex Index (v) parsen
-                current_vi = strtol(p_token, &end_ptr, 10);
-                if (p_token == end_ptr) { // Konnte keine Zahl parsen
+                current_vi = strtol(p_token, &end_ptr_face, 10);
+                if (p_token == end_ptr_face) { // Konnte keine Zahl parsen
                     fprintf(stderr, "Error parsing vertex index in face line: %s\n", token);
                     exit(1);
                 }
-                p_token = end_ptr; // Zeiger nach der geparsten Zahl bewegen
+                p_token = end_ptr_face; // Zeiger nach der geparsten Zahl bewegen
 
                 // 2. Ersten Slash prüfen und Texturkoordinaten-Index (vt) parsen
                 if (*p_token == '/') {
                     p_token++; // Den ersten Slash 'konsumieren'
                     
                     if (*p_token != '/') { // Nur parsen, wenn es NICHT ein doppelter Slash ist (z.B. "v//vn")
-                        current_ti = strtol(p_token, &end_ptr, 10);
-                        p_token = end_ptr; // Zeiger nach der geparsten Zahl bewegen
+                        current_ti = strtol(p_token, &end_ptr_face, 10);
+                        p_token = end_ptr_face; // Zeiger nach der geparsten Zahl bewegen
                     }
                     
                     // 3. Zweiten Slash prüfen und Normalen-Index (vn) parsen
-                    if (*p_token == '/') { // KORREKTUR: Hier muss auf '/' geprüft werden!
+                    if (*p_token == '/') { 
                         p_token++; // Den zweiten Slash 'konsumieren'
-                        current_ni = strtol(p_token, &end_ptr, 10);
-                        // p_token = end_ptr; // Nicht zwingend nötig, da letzter Teil des Tokens
+                        current_ni = strtol(p_token, &end_ptr_face, 10);
                     }
                 }
                 
                 // Indizes auf 0-basiert umwandeln
-                // (Nur dekrementieren, wenn der Index >= 1 ist, da -1 bedeutet, dass er fehlte)
                 if (current_vi > 0) current_vi--; 
                 if (current_ti > 0) current_ti--; 
                 if (current_ni > 0) current_ni--; 
-
-                // Diese lokalen Variablen sind nicht mehr nötig, da wir direkt mit current_vi/ti/ni arbeiten
-                // int vi = current_vi;
-                // int ti = current_ti;
-                // int ni = current_ni;
 
                 // Daten aus den Arrays holen
                 float vx = positions[current_vi * 3 + 0];
@@ -139,10 +161,10 @@ Obj load_obj(const char *path) {
                 float tx = (current_ti >= 0 && (size_t)current_ti * 2 + 1 < uv_len) ? uvs[current_ti * 2 + 0] : 0.0f;
                 float ty = (current_ti >= 0 && (size_t)current_ti * 2 + 1 < uv_len) ? uvs[current_ti * 2 + 1] : 0.0f;
 
-                // KORREKTUR: Fallback-Normalen auf (0,0,0) ändern, um die reine Weiß-Darstellung zu vermeiden
+                // Fallback-Normalen auf (0,0,0) ändern
                 float nx = (current_ni >= 0 && (size_t)current_ni * 3 + 2 < norm_len) ? normals[current_ni * 3 + 0] : 0.0f;
-                float ny = (current_ni >= 0 && (size_t)current_ni * 3 + 2 < norm_len) ? normals[current_ni * 3 + 1] : 0.0f; // <-- GEÄNDERT!
-                float nz = (current_ni >= 0 && (size_t)current_ni * 3 + 2 < norm_len) ? normals[current_ni * 3 + 2] : 0.0f; // <-- GEÄNDERT!
+                float ny = (current_ni >= 0 && (size_t)current_ni * 3 + 2 < norm_len) ? normals[current_ni * 3 + 1] : 0.0f; 
+                float nz = (current_ni >= 0 && (size_t)current_ni * 3 + 2 < norm_len) ? normals[current_ni * 3 + 2] : 0.0f; 
 
                 // Speicher für vertices erweitern, falls nötig
                 if (vert_len + 8 > vert_cap) {
@@ -207,4 +229,3 @@ void free_obj(Obj *obj) {
 }
 
 #endif
-

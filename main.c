@@ -6,7 +6,7 @@
 
 
 int main() {
-    const char *path = "cube.obj";
+    const char *path = "Skull.obj";
     Obj mesh = load_obj(path);
     printf("Loaded %zu floats (%zu vertices), %zu indices from %s\n",
            mesh.vertex_count, mesh.vertex_count / 8, mesh.index_count, path);
