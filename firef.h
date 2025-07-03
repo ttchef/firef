@@ -8,6 +8,8 @@
 #include <ctype.h> 
 #include <stdbool.h> 
 
+#define FIREF_IMPL
+
 #ifdef __cplusplus 
 extern "C" {
 #endif
@@ -53,10 +55,16 @@ typedef struct {
     unsigned int numFloats;
 } fr_ArrayFloat;
 
+typedef struct {
+    float* vertices;
+    unsigned int* indicies;
+} fr_OpenGLObj;
+
 void fr_loadObj(const char* filepath, fr_Obj* obj);
 void fr_freeObj(fr_Obj* obj);
 fr_ArrayFloat fr_mergeArrays(fr_Obj* obj); // needs to be freed 
 void fr_freeArrayFloat(fr_ArrayFloat* obj);
+void fr_loadOpenGLObj(const char* filepath, fr_OpenGLObj* obj);
 
 // internal functions
 char* fr_readFile(const char* filepath, size_t* outBufferSize);
@@ -629,6 +637,11 @@ fr_ArrayFloat fr_mergeArrays(fr_Obj* obj) {
 
     for (int i = 0; i < size; i++) {
 
+        if (outIndex >= totalSize) {
+            printf("[ERROR] Outer Array Index is more than size of array!\n");
+            break;
+        }
+
         const unsigned int vertexIndex = obj->indicies[i];
         const unsigned int vOffset = vertexIndex * 3;
 
@@ -671,6 +684,10 @@ fr_ArrayFloat fr_mergeArrays(fr_Obj* obj) {
 void fr_freeArrayFloat(fr_ArrayFloat *obj) {
     free(obj->array);
     obj->array = NULL;
+}
+
+void fr_loadOpenGLObj(const char *filepath, fr_OpenGLObj* obj) {
+    
 }
 
 #endif
