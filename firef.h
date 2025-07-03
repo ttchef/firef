@@ -8,7 +8,7 @@
 #include <ctype.h> 
 #include <stdbool.h> 
 
-#define FIREF_IMPL
+//#define FIREF_IMPL
 
 #ifdef __cplusplus 
 extern "C" {
@@ -582,7 +582,7 @@ void fr_printObj(fr_Obj *obj) {
 
 void fr_printArrayFloat(fr_ArrayFloat *array) {
     printf("-- ArrayFloat -- Size: %d\n", array->size);
-    for (int i = 0; i < array->size; i++) {
+    for (int i = 0; i < array->numFloats; i++) {
         printf("%d: %f\n", i, array->array[i]);
     }
 }
@@ -591,19 +591,25 @@ void fr_printArrayFloatMoreInfo(fr_ArrayFloat *array, fr_Obj *derivedObj) {
     printf("-- ArrayFloatMoreInfo -- Size: %d\n", array->size);
     unsigned int outIndex = 0;
     for (int i = 0; i < array->size; i++) {
-        printf("%d: %f |", i, array->array[outIndex++]);
-        printf(" %f |", array->array[outIndex++]);
-        printf(" %f ", array->array[outIndex++]);
+        
+        printf("%d Face: ", i);
+        // Face 
+        for (int j = 0; j < 2; j++) {
+            printf(" %f |", array->array[outIndex++]);
+            printf(" %f |", array->array[outIndex++]);
+            printf(" %f ", array->array[outIndex++]);
 
-        if (derivedObj->numUV != 0) {
-            printf("| %f ", array->array[outIndex++]);
-            printf("| %f ", array->array[outIndex++]);
-        }
+            if (derivedObj->numUV != 0) {
+                printf("| %f ", array->array[outIndex++]);
+                printf("| %f ", array->array[outIndex++]);
+            }
 
-        if (derivedObj->numNormals != 0) {
-            printf("| %f ", array->array[outIndex++]);
-            printf("| %f ", array->array[outIndex++]);
-            printf("| %f ", array->array[outIndex++]);
+            if (derivedObj->numNormals != 0) {
+                printf("| %f ", array->array[outIndex++]);
+                printf("| %f ", array->array[outIndex++]);
+                printf("| %f ", array->array[outIndex++]);
+            }
+
         }
 
         printf("\n");
