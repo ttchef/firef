@@ -82,79 +82,95 @@ Obj load_obj(const char *path) {
                 normals[norm_len++] = z;
             }
         } else if (strncmp(line, "f ", 2) == 0) {
-            char *token = strtok(line + 2, " \n");
-            unsigned int face[32];
+           char *token = strtok(line + 2, " \n");
+            unsigned int face[32]; // Max 32 vertices per face
             int count = 0;
 
-            int current_vi = -1;
-            int current_ti = -1;
-            int current_ni = -1;
+            // Schleife durch alle Vertex-Referenzen (z.B. "1/1/1", "2/2/2", "3/3/3") in einer Face-Zeile
+            while (token && count < 32) {
+                int current_vi = -1;
+                int current_ti = -1;
+                int current_ni = -1;
 
-            char* p_token = token;
-            char* end_ptr;
+                char* p_token = token;
+                char* end_ptr;
 
-            current_vi = strtol(p_token, &end_ptr, 10);
-            if (p_token == end_ptr) {
-                fprintf(stderr, "Error parsing vertex index in face line: %s\n", token);
-                exit(1);
-            }
-            p_token = end_ptr;
+                // 1. Vertex Index (v) parsen
+                current_vi = strtol(p_token, &end_ptr, 10);
+                if (p_token == end_ptr) { // Konnte keine Zahl parsen
+                    fprintf(stderr, "Error parsing vertex index in face line: %s\n", token);
+                    exit(1);
+                }
+                p_token = end_ptr; // Zeiger nach der geparsten Zahl bewegen
 
-            if (*p_token == '/') {
-                p_token++;
-
-                if (*p_token != '/') {
-                    current_ti = strtol(p_token, &end_ptr, 10);
-                    p_token = end_ptr;
+                // 2. Ersten Slash prüfen und Texturkoordinaten-Index (vt) parsen
+                if (*p_token == '/') {
+                    p_token++; // Den ersten Slash 'konsumieren'
+                    
+                    if (*p_token != '/') { // Nur parsen, wenn es NICHT ein doppelter Slash ist (z.B. "v//vn")
+                        current_ti = strtol(p_token, &end_ptr, 10);
+                        p_token = end_ptr; // Zeiger nach der geparsten Zahl bewegen
+                    }
+                    
+                    // 3. Zweiten Slash prüfen und Normalen-Index (vn) parsen
+                    if (*p_token == '/') { // KORREKTUR: Hier muss auf '/' geprüft werden!
+                        p_token++; // Den zweiten Slash 'konsumieren'
+                        current_ni = strtol(p_token, &end_ptr, 10);
+                        // p_token = end_ptr; // Nicht zwingend nötig, da letzter Teil des Tokens
+                    }
                 }
                 
-                if (*p_token != '/') {
-                    p_token++;
-                    current_ni = strtol(p_token, &end_ptr, 10);
+                // Indizes auf 0-basiert umwandeln
+                // (Nur dekrementieren, wenn der Index >= 1 ist, da -1 bedeutet, dass er fehlte)
+                if (current_vi > 0) current_vi--; 
+                if (current_ti > 0) current_ti--; 
+                if (current_ni > 0) current_ni--; 
+
+                // Diese lokalen Variablen sind nicht mehr nötig, da wir direkt mit current_vi/ti/ni arbeiten
+                // int vi = current_vi;
+                // int ti = current_ti;
+                // int ni = current_ni;
+
+                // Daten aus den Arrays holen
+                float vx = positions[current_vi * 3 + 0];
+                float vy = positions[current_vi * 3 + 1];
+                float vz = positions[current_vi * 3 + 2];
+
+                float tx = (current_ti >= 0 && (size_t)current_ti * 2 + 1 < uv_len) ? uvs[current_ti * 2 + 0] : 0.0f;
+                float ty = (current_ti >= 0 && (size_t)current_ti * 2 + 1 < uv_len) ? uvs[current_ti * 2 + 1] : 0.0f;
+
+                // KORREKTUR: Fallback-Normalen auf (0,0,0) ändern, um die reine Weiß-Darstellung zu vermeiden
+                float nx = (current_ni >= 0 && (size_t)current_ni * 3 + 2 < norm_len) ? normals[current_ni * 3 + 0] : 0.0f;
+                float ny = (current_ni >= 0 && (size_t)current_ni * 3 + 2 < norm_len) ? normals[current_ni * 3 + 1] : 0.0f; // <-- GEÄNDERT!
+                float nz = (current_ni >= 0 && (size_t)current_ni * 3 + 2 < norm_len) ? normals[current_ni * 3 + 2] : 0.0f; // <-- GEÄNDERT!
+
+                // Speicher für vertices erweitern, falls nötig
+                if (vert_len + 8 > vert_cap) {
+                    size_t new_cap = vert_cap == 0 ? 64 : vert_cap * 2;
+                    float *tmp = (float*)realloc(vertices, new_cap * sizeof(float));
+                    if (!tmp) exit(1);
+                    vertices = tmp;
+                    vert_cap = new_cap;
                 }
-            }
 
-            current_vi--;
-            if (current_ti > 0) current_ti--;
-            if (current_ni > 0) current_ni--;
+                // Interleaved Vertexdaten hinzufügen
+                vertices[vert_len++] = vx;
+                vertices[vert_len++] = vy;
+                vertices[vert_len++] = vz;
+                vertices[vert_len++] = tx;
+                vertices[vert_len++] = ty;
+                vertices[vert_len++] = nx;
+                vertices[vert_len++] = ny;
+                vertices[vert_len++] = nz;
 
-            int vi = current_vi;
-            int ti = current_ti;
-            int ni = current_ni;
+                // Index für das Face speichern (für das EBO)
+                face[count++] = vertex_counter++;
 
-            float vx = positions[vi * 3 + 0];
-            float vy = positions[vi * 3 + 1];
-            float vz = positions[vi * 3 + 2];
+                // Nächstes Token auf der Zeile holen
+                token = strtok(NULL, " \n");
+            } // ENDE der while(token) Schleife
 
-            float tx = (ti >= 0 && ti * 2 + 1 < uv_len) ? uvs[ti * 2 + 0] : 0.0f;
-            float ty = (ti >= 0 && ti * 2 + 1 < uv_len) ? uvs[ti * 2 + 1] : 0.0f;
-
-            float nx = (ni >= 0 && ni * 3 + 2 < norm_len) ? normals[ni * 3 + 0] : 0.0f;
-            float ny = (ni >= 0 && ni * 3 + 2 < norm_len) ? normals[ni * 3 + 1] : 1.0f;
-            float nz = (ni >= 0 && ni * 3 + 2 < norm_len) ? normals[ni * 3 + 2] : 0.0f;
-
-
-            if (vert_len + 8 > vert_cap) {
-                size_t new_cap = vert_cap == 0 ? 64 : vert_cap * 2;
-                float *tmp = (float*)realloc(vertices, new_cap * sizeof(float));
-                if (!tmp) exit(1);
-                vertices = tmp;
-                vert_cap = new_cap;
-            }
-
-            vertices[vert_len++] = vx;
-            vertices[vert_len++] = vy;
-            vertices[vert_len++] = vz;
-            vertices[vert_len++] = tx;
-            vertices[vert_len++] = ty;
-            vertices[vert_len++] = nx;
-            vertices[vert_len++] = ny;
-            vertices[vert_len++] = nz;
-
-            face[count++] = vertex_counter++;
-            token = strtok(NULL, " \n");
-            
-
+            // Dreiecke aus den gesammelten Face-Vertices bilden (Fan-Triangulation)
             for (int i = 1; i < count - 1; ++i) {
                 if (idx_len + 3 > idx_cap) {
                     size_t new_cap = idx_cap == 0 ? 64 : idx_cap * 2;
@@ -168,7 +184,7 @@ Obj load_obj(const char *path) {
                 indices[idx_len++] = face[i];
                 indices[idx_len++] = face[i + 1];
             }
-        }
+        }    
     }
 
     fclose(file);
